@@ -75,6 +75,9 @@ input[type=range]{flex:1;accent-color:var(--sand);height:6px}
 .ph.cur{background:var(--sand);color:var(--ink);border-left:5px solid var(--accent);padding-left:18px}
 .ph.done{color:#6f6760}
 .pz{color:#b5aea6;font-size:13px;padding:2px 14px;font-style:italic}
+.tip{color:#9a9aa5;font-size:13px;margin:-4px 4px 12px}
+.tip summary{cursor:pointer;color:#c9c0b6;font-weight:600}
+.tip p{margin:8px 0;line-height:1.5}.tip b{color:#e8e0d6}
 .warn{background:#fff3e0;border-radius:14px;padding:12px 16px;margin:12px 0;color:#7a4b00;font-size:14px}
 </style>
 </head>
@@ -123,6 +126,12 @@ input[type=range]{flex:1;accent-color:var(--sand);height:6px}
         <button class="chip" id="test">Testar voz</button>
       </div>
       <div class="note" id="vnote"></div>
+      <audio id="aud" playsinline></audio>
+      <details class="tip"><summary>Quer uma voz ainda melhor?</summary>
+        <p><b>Voz neural:</b> escolha uma opção "Neural" na lista. Baixa uma vez (~63 MB, no Wi-Fi) e depois funciona offline, inclusive com a tela bloqueada.</p>
+        <p><b>iPhone:</b> Ajustes → Acessibilidade → Conteúdo Falado → Vozes → Português → baixe <b>Luciana (Aprimorada)</b> ou <b>Felipe (Aprimorada)</b>. Elas aparecem aqui com ★.</p>
+        <p><b>Android (Chrome):</b> as vozes "Google português do Brasil" já são naturais.</p>
+      </details>
       <div class="prog"><span id="cnt">Frase 1 de 1</span><input type="range" id="seek" min="0" max="0" value="0"></div>
     </div>
     <div class="warn" id="noTTS" hidden>Este navegador não tem leitura em voz alta. Abra no Safari (iPhone) ou Chrome (Android).</div>
@@ -151,6 +160,14 @@ let token = 0;           // invalida callbacks de falas canceladas
 let rateIdx = Math.max(0, RATES.indexOf(store.get('lpm.rate', 1)));
 let voices = [];
 let wakeLock = null;
+const aud = $('aud');
+let N = null, nEngine = null, nIds = null, nKey = '', clips = new Map();
+const isN = () => String($('voice').value).startsWith('n:');
+const nId = () => String($('voice').value).slice(2);
+const setNote = t => { $('vnote').textContent = t; };
+const silence = (() => { const n = 2205, dv = new DataView(new ArrayBuffer(44 + n * 2)); const w = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+  w(0,'RIFF'); dv.setUint32(4,36+n*2,true); w(8,'WAVEfmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true); dv.setUint32(24,22050,true); dv.setUint32(28,44100,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true); w(36,'data'); dv.setUint32(40,n*2,true);
+  return URL.createObjectURL(new Blob([dv], {type:'audio/wav'})); })();
 
 /* ---------- parser ---------- */
 function parse(text){
@@ -261,27 +278,90 @@ function setPos(p, noScroll){
 /* ---------- voz ---------- */
 function loadVoices(){
   const all = synth ? synth.getVoices() : [];
-  if(!all.length) return;
+  const sel = $('voice'), prev = sel.value;
   const pt = all.filter(v => /^pt/i.test(v.lang));
   voices = pt.length ? pt : all;
-  voices.sort((a, b) => (/pt-BR/i.test(b.lang) - /pt-BR/i.test(a.lang)) || a.name.localeCompare(b.name));
-  const sel = $('voice'); sel.innerHTML = '';
-  voices.forEach((v, i) => {
-    const o = document.createElement('option');
-    o.value = i; o.textContent = `${v.name} — ${v.lang}${v.localService ? ' · local' : ''}`;
-    sel.appendChild(o);
+  const good = v => /enhanced|premium|aprimorada|natural|online|google|neural/i.test(v.name + v.voiceURI);
+  voices.sort((a, b) => (/pt-BR/i.test(b.lang) - /pt-BR/i.test(a.lang)) || (good(b) - good(a)) || a.name.localeCompare(b.name));
+  sel.innerHTML = '';
+  if(voices.length){
+    const g = document.createElement('optgroup'); g.label = 'Voz do aparelho';
+    voices.forEach((v, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = `${good(v) ? '★ ' : ''}${v.name} — ${v.lang}${v.localService ? ' · local' : ''}`;
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
+  }
+  const g2 = document.createElement('optgroup'); g2.label = 'Voz neural (grátis, baixa 1 vez)';
+  [['pt_BR-faber-medium', 'Neural · Faber — masculina (melhor)'], ['pt_BR-edresson-low', 'Neural · Edresson — masculina (leve)']].forEach(([id, t]) => {
+    const o = document.createElement('option'); o.value = 'n:' + id; o.textContent = t; g2.appendChild(o);
   });
+  sel.appendChild(g2);
   const saved = store.get('lpm.voice', '');
-  let i = voices.findIndex(v => v.voiceURI === saved);
-  if(i < 0) i = voices.findIndex(v => /luciana|francisca|maria|thalita/i.test(v.name) && /pt-BR/i.test(v.lang));
-  if(i < 0) i = 0;
-  sel.value = i; voiceNote();
+  let val = null;
+  if(saved.startsWith('n:')) val = saved;
+  else { const i = voices.findIndex(v => v.voiceURI === saved); if(i >= 0) val = String(i); }
+  if(val === null && voices.length){
+    const i = voices.findIndex(v => /luciana|francisca|maria|thalita/i.test(v.name) && /pt-BR/i.test(v.lang));
+    val = String(i < 0 ? 0 : i);
+  }
+  if(val === null) val = 'n:pt_BR-faber-medium';
+  sel.value = (prev && !voices.length ? prev : val); voiceNote();
 }
 function voiceNote(){
+  if(isN()){ N ? nStatus() : setNote('Voz neural: baixa ~63 MB na primeira vez e depois funciona offline.'); return; }
   const v = voices[$('voice').value];
-  $('vnote').textContent = v ? (v.localService ? 'Esta voz funciona no aparelho.' : 'Esta voz usa internet.') : '';
+  setNote(v ? (v.localService ? 'Esta voz funciona no aparelho.' : 'Esta voz usa internet.') : '');
 }
-function utter(text, done){
+async function nStatus(){ setNote((await N.isDownloaded(nId())) ? 'Voz neural pronta. Funciona offline.' : 'Voz neural: baixa ~63 MB na primeira vez.'); }
+
+/* ---------- voz neural (Piper, roda no aparelho) ---------- */
+async function nReady(){
+  N = N || await import('./neural.bundle.js');
+  const id = nId();
+  if(!nEngine || nEngine.id !== id){
+    setNote('Baixando voz… 0%');
+    nEngine = await N.load(id, p => setNote(`Baixando voz… ${Math.round(p * 100)}%`));
+    nKey = '';
+  }
+  const key = id + '|' + currentId;
+  if(nKey !== key){
+    setNote('Preparando roteiro…');
+    nIds = await N.phonemize(nEngine, says.map(i => speakable(items[i].text)));
+    nKey = key; clips.clear();
+  }
+  nStatus();
+}
+function clip(p){
+  if(p < 0 || p >= says.length) return Promise.resolve(null);
+  if(!clips.has(p)){
+    const ids = nIds[p];
+    clips.set(p, ids && ids.length ? N.synth(nEngine, ids).then(b => URL.createObjectURL(b)) : Promise.resolve(null));
+  }
+  return clips.get(p);
+}
+function playUrl(url, done){
+  if(!url){ done(); return; }
+  aud.onended = () => { URL.revokeObjectURL(url); done(); };
+  aud.onerror = () => done();
+  aud.src = url; aud.playbackRate = RATES[rateIdx];
+  aud.play().catch(() => done());
+}
+async function nUtter(p, done){
+  const my = token;
+  clip(p + 1);                              // prepara a próxima enquanto esta toca
+  const url = await clip(p);
+  if(my !== token) return;
+  clips.delete(p - 1);
+  playUrl(url, done);
+}
+function fallbackToDevice(msg){
+  setNote(msg);
+  if(voices.length) $('voice').value = '0';
+}
+function utter(text, done, p){
+  if(isN()){ nUtter(p, done); return; }
   const u = new SpeechSynthesisUtterance(speakable(text));
   const v = voices[$('voice').value];
   if(v){ u.voice = v; u.lang = v.lang; } else u.lang = 'pt-BR';
@@ -291,12 +371,19 @@ function utter(text, done){
 }
 
 /* ---------- reprodução ---------- */
-function speakFrom(p){
-  if(!synth) return;
-  synth.cancel();
+async function speakFrom(p){
+  if(!synth && !isN()) return;
+  if(synth) synth.cancel();
+  aud.pause();
   const my = ++token;
   playing = true; ui(); lock();
   setPos(p);
+  if(isN()){
+    aud.src = silence; aud.play().catch(() => {});   // libera o áudio no iOS (gesto do toque)
+    try{ await nReady(); }
+    catch(e){ console.error(e); if(my !== token) return; fallbackToDevice('Não deu para baixar a voz neural. Usando a voz do aparelho.'); }
+    if(my !== token) return;
+  }
   const step = () => {
     if(my !== token) return;
     const idx = says[pos];
@@ -309,13 +396,14 @@ function speakFrom(p){
       if(items[idx + 1] && items[idx + 1].k === 'say' && items[idx + 1].gap) wait += 500;
       if(pos >= says.length - 1){ stop(); setPos(0, true); return; }
       setTimeout(() => { if(my !== token) return; setPos(pos + 1); step(); }, wait);
-    });
+    }, pos);
   };
   step();
 }
 function stop(){
   token++; playing = false;
   if(synth) synth.cancel();
+  aud.onended = null; aud.pause();
   ui(); unlock();
 }
 function ui(){
@@ -344,15 +432,25 @@ $('seek').oninput = e => { setPos(+e.target.value); if(playing) speakFrom(pos); 
 $('spd').onclick = () => {
   rateIdx = (rateIdx + 1) % RATES.length; store.set('lpm.rate', RATES[rateIdx]);
   $('spd').textContent = RATES[rateIdx] + '×';
-  if(playing) speakFrom(pos);
+  if(isN()) aud.playbackRate = RATES[rateIdx]; else if(playing) speakFrom(pos);
 };
 $('voice').onchange = () => {
-  const v = voices[$('voice').value]; if(v) store.set('lpm.voice', v.voiceURI);
+  const val = $('voice').value, v = voices[val];
+  store.set('lpm.voice', isN() ? val : (v ? v.voiceURI : ''));
   voiceNote(); if(playing) speakFrom(pos);
 };
-$('test').onclick = () => {
-  if(!synth) return; synth.cancel(); token++; playing = false; ui();
-  utter('Olá! Esta é a voz que vai ler o seu roteiro.', () => {});
+$('test').onclick = async () => {
+  stop();
+  const txt = 'Olá! Esta é a voz que vai ler o seu roteiro.';
+  if(!isN()){ if(synth) utter(txt, () => {}); return; }
+  aud.src = silence; aud.play().catch(() => {});
+  try{
+    N = N || await import('./neural.bundle.js');
+    nEngine = (nEngine && nEngine.id === nId()) ? nEngine : await N.load(nId(), p => setNote(`Baixando voz… ${Math.round(p * 100)}%`));
+    const [ids] = await N.phonemize(nEngine, [txt]);
+    playUrl(URL.createObjectURL(await N.synth(nEngine, ids)), () => {});
+    nStatus();
+  }catch(e){ console.error(e); setNote('Não deu para baixar a voz neural. Verifique a internet.'); }
 };
 document.addEventListener('visibilitychange', () => { if(playing && !document.hidden) lock(); });
 
@@ -364,8 +462,9 @@ if('mediaSession' in navigator){
 
 /* ---------- init ---------- */
 $('spd').textContent = RATES[rateIdx] + '×';
-if(!synth){ $('noTTS').hidden = false; }
-else { loadVoices(); synth.onvoiceschanged = loadVoices; setTimeout(loadVoices, 500); }
+if(!synth){ $('noTTS').hidden = true; }
+loadVoices();
+if(synth){ synth.onvoiceschanged = loadVoices; setTimeout(loadVoices, 500); }
 renderLib();
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
