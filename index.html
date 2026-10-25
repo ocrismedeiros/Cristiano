@@ -125,6 +125,14 @@ input[type=range]{flex:1;accent-color:var(--sand);height:6px}
         <select class="chip" id="voice" aria-label="Voz"></select>
         <button class="chip" id="test">Testar voz</button>
       </div>
+      <div class="row">
+        <select class="chip" id="shadow" aria-label="Tempo pra falar">
+          <option value="0">Tempo pra falar: sem pausa</option>
+          <option value="0.8">Tempo pra falar: curto</option>
+          <option value="1.2">Tempo pra falar: normal</option>
+          <option value="1.8">Tempo pra falar: longo</option>
+        </select>
+      </div>
       <div class="note" id="vnote"></div>
       <audio id="aud" playsinline></audio>
       <details class="tip"><summary>Quer uma voz ainda melhor?</summary>
@@ -160,6 +168,8 @@ let token = 0;           // invalida callbacks de falas canceladas
 let rateIdx = Math.max(0, RATES.indexOf(store.get('lpm.rate', 1)));
 let voices = [];
 let wakeLock = null;
+let t0 = 0;              // início real da fala da frase atual (para calcular o tempo de repetição)
+let shadow = +store.get('lpm.shadow', 1.2);
 const aud = $('aud');
 let N = null, nEngine = null, nIds = null, nKey = '', clips = new Map();
 const isN = () => String($('voice').value).startsWith('n:');
@@ -346,6 +356,7 @@ function playUrl(url, done){
   aud.onended = () => { URL.revokeObjectURL(url); done(); };
   aud.onerror = () => done();
   aud.src = url; aud.playbackRate = RATES[rateIdx];
+  t0 = performance.now();
   aud.play().catch(() => done());
 }
 async function nUtter(p, done){
@@ -366,6 +377,7 @@ function utter(text, done, p){
   const v = voices[$('voice').value];
   if(v){ u.voice = v; u.lang = v.lang; } else u.lang = 'pt-BR';
   u.rate = RATES[rateIdx];
+  u.onstart = () => { t0 = performance.now(); };
   u.onend = done; u.onerror = done;
   synth.speak(u);
 }
@@ -388,10 +400,12 @@ async function speakFrom(p){
     if(my !== token) return;
     const idx = says[pos];
     const text = items[idx].text;
+    t0 = 0;
     utter(text, () => {
       if(my !== token) return;
       // pausas explícitas logo após a frase
-      let wait = 250, j = idx + 1;
+      const spoke = t0 ? performance.now() - t0 : text.length * 70;
+      let wait = 250 + Math.min(15000, shadow * spoke), j = idx + 1;
       while(items[j] && items[j].k !== 'say'){ if(items[j].k === 'pz') wait += PAUSE_MS; j++; }
       if(items[idx + 1] && items[idx + 1].k === 'say' && items[idx + 1].gap) wait += 500;
       if(pos >= says.length - 1){ stop(); setPos(0, true); return; }
@@ -462,6 +476,8 @@ if('mediaSession' in navigator){
 
 /* ---------- init ---------- */
 $('spd').textContent = RATES[rateIdx] + '×';
+$('shadow').value = String(shadow);
+$('shadow').onchange = () => { shadow = +$('shadow').value; store.set('lpm.shadow', shadow); };
 if(!synth){ $('noTTS').hidden = true; }
 loadVoices();
 if(synth){ synth.onvoiceschanged = loadVoices; setTimeout(loadVoices, 500); }
