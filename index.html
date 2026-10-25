@@ -78,6 +78,23 @@ input[type=range]{flex:1;accent-color:var(--sand);height:6px}
 .tip{color:#9a9aa5;font-size:13px;margin:-4px 4px 12px}
 .tip summary{cursor:pointer;color:#c9c0b6;font-weight:600}
 .tip p{margin:8px 0;line-height:1.5}.tip b{color:#e8e0d6}
+/* gravação */
+#rec{position:fixed;inset:0;background:#000;z-index:50;color:#fff;display:flex;flex-direction:column}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rtop{position:relative;display:flex;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 12px) 16px 0}
+.rbtn{background:rgba(0,0,0,.55);border-radius:999px;padding:12px 18px;font-weight:700;font-size:15px;color:#fff;backdrop-filter:blur(8px)}
+#recMsg{position:relative;flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:96px;font-weight:700;padding:0 24px;text-shadow:0 2px 12px #000}
+#recMsg.small{font-size:16px;font-weight:600}
+.rbot{position:relative;padding:12px 16px calc(env(safe-area-inset-bottom) + 18px);background:linear-gradient(transparent,rgba(0,0,0,.75) 35%)}
+#recText{font-size:20px;line-height:1.35;text-align:center;margin-bottom:14px;text-shadow:0 1px 8px #000;min-height:54px}
+.rctl{display:flex;align-items:center;justify-content:center;gap:22px}
+.rbig{width:78px;height:78px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.5);background-clip:padding-box;position:relative}
+.rbig::after{content:"";position:absolute;inset:14px;border-radius:50%;background:#e5322d;transition:all .15s}
+.rbig.on::after{inset:22px;border-radius:8px}
+#recDone{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;gap:12px;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 18px)}
+#recPrev{flex:1;min-height:0;width:100%;border-radius:18px;background:#111;object-fit:contain}
+#recDone .cta{background:var(--sand);color:var(--ink)}
+#recDone .cta.alt{background:#2a2a33;color:#fff}
 .warn{background:#fff3e0;border-radius:14px;padding:12px 16px;margin:12px 0;color:#7a4b00;font-size:14px}
 </style>
 </head>
@@ -125,6 +142,7 @@ input[type=range]{flex:1;accent-color:var(--sand);height:6px}
         <select class="chip" id="voice" aria-label="Voz"></select>
         <button class="chip" id="test">Testar voz</button>
       </div>
+      <div class="row"><button class="chip" id="recOpen">🎥 Gravar vídeo com o roteiro</button></div>
       <div class="row">
         <select class="chip" id="shadow" aria-label="Tempo pra falar">
           <option value="0">Tempo pra falar: sem pausa</option>
@@ -147,6 +165,20 @@ input[type=range]{flex:1;accent-color:var(--sand);height:6px}
   </main>
 </div>
 
+<div id="rec" hidden>
+  <video id="cam" playsinline muted autoplay></video>
+  <div class="rtop"><button class="rbtn" id="recClose">✕ Fechar</button><button class="rbtn" id="recFlip">⟲ Virar câmera</button></div>
+  <div id="recMsg" class="small"></div>
+  <div class="rbot">
+    <div id="recText"></div>
+    <div class="rctl"><button class="rbtn" id="rPrev">⏮</button><button class="rbig" id="rBtn" aria-label="Gravar"></button><button class="rbtn" id="rNext">⏭</button></div>
+  </div>
+  <div id="recDone" hidden>
+    <video id="recPrev" controls playsinline></video>
+    <button class="cta" id="recSave">Salvar / Compartilhar</button>
+    <button class="cta alt" id="recAgain">Gravar de novo</button>
+  </div>
+</div>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -172,7 +204,8 @@ let t0 = 0;              // início real da fala da frase atual (para calcular o
 let shadow = +store.get('lpm.shadow', 1.2);
 const aud = $('aud');
 let N = null, nEngine = null, nIds = null, nKey = '', clips = new Map();
-const isN = () => String($('voice').value).startsWith('n:');
+let noNeural = false;     // vira true se o download da voz neural falhar
+const isN = () => !noNeural && String($('voice').value).startsWith('n:');
 const nId = () => String($('voice').value).slice(2);
 const setNote = t => { $('vnote').textContent = t; };
 const silence = (() => { const n = 2205, dv = new DataView(new ArrayBuffer(44 + n * 2)); const w = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
@@ -279,6 +312,7 @@ function setPos(p, noScroll){
     cur.el.classList.add('cur');
     if(!noScroll) cur.el.scrollIntoView({block:'center', behavior:'smooth'});
   }
+  $('recText').textContent = cur ? cur.text : '';
   $('cnt').textContent = `Frase ${says.length ? pos + 1 : 0} de ${says.length}`;
   $('seek').value = pos;
   const s = scripts.find(x => x.id === currentId);
@@ -368,7 +402,7 @@ async function nUtter(p, done){
   playUrl(url, done);
 }
 function fallbackToDevice(msg){
-  setNote(msg);
+  setNote(msg); noNeural = true;
   if(voices.length) $('voice').value = '0';
 }
 function utter(text, done, p){
@@ -449,6 +483,7 @@ $('spd').onclick = () => {
   if(isN()) aud.playbackRate = RATES[rateIdx]; else if(playing) speakFrom(pos);
 };
 $('voice').onchange = () => {
+  noNeural = false;
   const val = $('voice').value, v = voices[val];
   store.set('lpm.voice', isN() ? val : (v ? v.voiceURI : ''));
   voiceNote(); if(playing) speakFrom(pos);
@@ -473,6 +508,76 @@ if('mediaSession' in navigator){
   h('play', () => speakFrom(pos)); h('pause', stop);
   h('nexttrack', () => $('next').click()); h('previoustrack', () => $('prev').click());
 }
+
+/* ---------- gravação de vídeo (câmera + microfone no próprio app) ---------- */
+let camStream = null, recorder = null, chunks = [], facing = 'user', recBlob = null, recRun = 0, recDiscard = false;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const recMsg = (t, small) => { const m = $('recMsg'); m.textContent = t; m.classList.toggle('small', !!small); };
+async function camStart(){
+  camStop();
+  camStream = await navigator.mediaDevices.getUserMedia({
+    video: {facingMode: facing, width: {ideal: 1080}, height: {ideal: 1920}, frameRate: {ideal: 30}},
+    audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true}
+  });
+  $('cam').srcObject = camStream;
+  $('cam').style.transform = facing === 'user' ? 'scaleX(-1)' : 'none';
+}
+function camStop(){ if(camStream) camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+function recording(){ return recorder && recorder.state === 'recording'; }
+function recReset(){
+  recRun++; $('rBtn').classList.remove('on'); $('recDone').hidden = true;
+  recMsg('Use fone de ouvido, senão a voz do roteiro entra na gravação. Toque no botão vermelho para começar (contagem de 3 segundos).', true);
+}
+$('recOpen').onclick = async () => {
+  stop(); $('rec').hidden = false; recReset();
+  if(!navigator.mediaDevices || !window.MediaRecorder){ recMsg('Este navegador não grava vídeo. No iPhone use o Safari atualizado.', true); return; }
+  try{ await camStart(); }
+  catch(e){ recMsg('Não consegui abrir a câmera e o microfone. Permita o acesso nas configurações do navegador e tente de novo.', true); }
+};
+$('recClose').onclick = () => {
+  recDiscard = true; recRun++; stop();
+  if(recording()) recorder.stop();
+  camStop(); $('rec').hidden = true;
+};
+$('recFlip').onclick = async () => {
+  if(recording()) return;
+  facing = facing === 'user' ? 'environment' : 'user';
+  try{ await camStart(); }catch(e){ facing = facing === 'user' ? 'environment' : 'user'; }
+};
+$('rPrev').onclick = () => $('prev').click();
+$('rNext').onclick = () => $('next').click();
+$('rBtn').onclick = async () => {
+  if(recording()){ stop(); recorder.stop(); return; }
+  if(!camStream) return;
+  aud.src = silence; aud.play().catch(() => {});      // libera o áudio no iOS enquanto ainda há gesto do toque
+  const run = ++recRun;
+  for(let n = 3; n > 0; n--){ recMsg(String(n)); await sleep(1000); if(run !== recRun) return; }
+  recMsg('');
+  const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+    .find(m => MediaRecorder.isTypeSupported(m)) || '';
+  chunks = []; recDiscard = false;
+  recorder = new MediaRecorder(camStream, mime ? {mimeType: mime, videoBitsPerSecond: 8000000} : {});
+  recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    $('rBtn').classList.remove('on');
+    if(recDiscard) return;
+    recBlob = new Blob(chunks, {type: recorder.mimeType || mime || 'video/mp4'});
+    $('recPrev').src = URL.createObjectURL(recBlob); $('recDone').hidden = false;
+  };
+  recorder.start(1000);
+  $('rBtn').classList.add('on');
+  speakFrom(pos);
+};
+$('recAgain').onclick = () => { recReset(); setPos(0); };
+$('recSave').onclick = async () => {
+  if(!recBlob) return;
+  const ext = /mp4/.test(recBlob.type) ? 'mp4' : 'webm';
+  const file = new File([recBlob], `roteiro-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.${ext}`, {type: recBlob.type});
+  try{
+    if(navigator.canShare && navigator.canShare({files: [file]})){ await navigator.share({files: [file]}); return; }
+  }catch(e){ if(e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(recBlob); a.download = file.name; a.click();
+};
 
 /* ---------- init ---------- */
 $('spd').textContent = RATES[rateIdx] + '×';
