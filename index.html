@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f3ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Lê pra mim</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:ital,wght@1,500&display=swap">
+<style>
+:root{
+  --bg:#f6f3ee; --card:#fff; --ink:#1a1714; --muted:#8a817a; --accent:#6b4a38;
+  --sand:#e9dfd3; --sand2:#f3eee8; --line:#e4ddd4; --dark:#121218; --dark2:#1f1f27;
+  --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);padding-bottom:env(safe-area-inset-bottom)}
+button{font:inherit;color:inherit;cursor:pointer;border:0}
+.wrap{max-width:640px;margin:0 auto;padding:12px 16px 40px}
+[hidden]{display:none!important}
+
+/* topo */
+.top{display:flex;gap:10px;justify-content:flex-end;padding:8px 0 12px}
+.pill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:10px 18px;font-weight:700;font-size:14px;letter-spacing:.02em}
+.pill:active{transform:scale(.98)}
+
+/* hero */
+.hero{border-radius:28px;padding:56px 22px 26px;color:#fff;background:linear-gradient(135deg,#a8805a,#d3b48c 55%,#8c6a4a);margin-bottom:18px}
+.hero h1{font-family:var(--serif);font-style:italic;font-weight:500;font-size:56px;line-height:1;margin:0 0 8px}
+.hero p{margin:0;font-weight:600;font-size:17px}
+
+/* editor */
+.card{background:var(--card);border-radius:30px;padding:22px 20px 24px;border:1px solid var(--line)}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.22em;color:var(--accent);text-transform:uppercase}
+.card h2{font-family:var(--serif);font-style:italic;font-weight:500;font-size:34px;margin:6px 0 16px}
+textarea,.title{width:100%;border:1px solid var(--line);background:#faf9f6;border-radius:22px;padding:18px;font:inherit;font-size:17px;color:var(--ink);outline:none}
+textarea{min-height:340px;resize:vertical;line-height:1.5}
+.title{padding:12px 18px;border-radius:999px;margin-bottom:10px;font-size:15px}
+textarea:focus,.title:focus{border-color:var(--accent)}
+.hint{color:var(--muted);font-size:14px;line-height:2.1;margin:14px 0 16px}
+code{background:var(--sand2);border-radius:8px;padding:3px 9px;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#4a3a30}
+.cta{width:100%;padding:18px;border-radius:999px;background:var(--ink);color:#fff;font-weight:700;font-size:17px}
+.cta:disabled{background:#9d9e9f}
+
+/* biblioteca */
+.lib{margin-top:18px}
+.lib h3{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+.item{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:6px 6px 6px 16px;margin-bottom:8px}
+.item .nm{flex:1;text-align:left;background:none;padding:10px 0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.item .rm{background:none;color:var(--muted);padding:10px 14px;font-size:18px}
+
+/* player */
+.player{position:sticky;top:0;z-index:5;background:var(--dark);color:#fff;border-radius:0 0 26px 26px;padding:18px 16px 16px;margin:0 -16px}
+.btn-play{width:100%;background:var(--sand);color:var(--ink);border-radius:999px;padding:20px;font-weight:700;font-size:20px;margin-bottom:12px}
+.row{display:flex;gap:10px;margin-bottom:12px}
+.row>*{flex:1}
+.chip{background:var(--dark2);border:1px solid #33333d;color:#fff;border-radius:999px;padding:16px 8px;font-weight:700;font-size:15px;white-space:nowrap}
+select.chip{appearance:none;text-align:left;padding-left:20px;flex:2.4;text-overflow:ellipsis;min-width:0}
+.note{color:#8d8d98;font-size:14px;margin:2px 4px 12px}
+.prog{display:flex;align-items:center;gap:14px;color:#9a9aa5;font-weight:600;font-size:15px;padding:0 4px}
+.prog span{white-space:nowrap}
+input[type=range]{flex:1;accent-color:var(--sand);height:6px}
+
+/* roteiro */
+.script{padding:18px 4px 120px}
+.sec{margin:26px 0 8px;font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+.scr{background:var(--sand2);color:#4a3f37;border-radius:14px;padding:12px 16px;margin:10px 0;font-size:15px}
+.scr b{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:2px}
+.ph{padding:10px 14px;border-radius:20px;font-size:22px;line-height:1.5;color:#9b938c;margin:2px 0;cursor:pointer;transition:background .15s}
+.ph.gap{margin-top:26px}
+.ph.cur{background:var(--sand);color:var(--ink);border-left:5px solid var(--accent);padding-left:18px}
+.ph.done{color:#6f6760}
+.pz{color:#b5aea6;font-size:13px;padding:2px 14px;font-style:italic}
+.warn{background:#fff3e0;border-radius:14px;padding:12px 16px;margin:12px 0;color:#7a4b00;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- EDITOR -->
+  <main id="viewEdit">
+    <div class="hero">
+      <h1>Lê pra mim</h1>
+      <p>Ouça seus roteiros no fone de ouvido</p>
+    </div>
+    <section class="card">
+      <div class="eyebrow">Seu roteiro</div>
+      <h2>Cole o texto do vídeo.</h2>
+      <input id="titleIn" class="title" placeholder="Nome do roteiro (opcional)" maxlength="60">
+      <textarea id="txt" placeholder="Cole seu roteiro aqui..."></textarea>
+      <div class="hint">
+        Marcações aceitas (aparecem na tela, não são lidas):<br>
+        <code>[GANCHO]</code> seção · <code>[na tela: …]</code> direção · <code>(pausa)</code> silêncio
+      </div>
+      <button id="prep" class="cta" disabled>Preparar leitura</button>
+    </section>
+    <section class="lib" id="lib" hidden>
+      <h3>Meus roteiros</h3>
+      <div id="libList"></div>
+    </section>
+  </main>
+
+  <!-- PLAYER -->
+  <main id="viewPlay" hidden>
+    <div class="top">
+      <button class="pill" id="titleBtn">Roteiros</button>
+      <button class="pill" id="newBtn">+ Novo roteiro</button>
+    </div>
+    <div class="player">
+      <button class="btn-play" id="play">▶ Ouvir</button>
+      <div class="row">
+        <button class="chip" id="prev">⏮ Frase</button>
+        <button class="chip" id="rep">↻ Repetir</button>
+        <button class="chip" id="next">Frase ⏭</button>
+        <button class="chip" id="spd">1×</button>
+      </div>
+      <div class="row">
+        <select class="chip" id="voice" aria-label="Voz"></select>
+        <button class="chip" id="test">Testar voz</button>
+      </div>
+      <div class="note" id="vnote"></div>
+      <div class="prog"><span id="cnt">Frase 1 de 1</span><input type="range" id="seek" min="0" max="0" value="0"></div>
+    </div>
+    <div class="warn" id="noTTS" hidden>Este navegador não tem leitura em voz alta. Abra no Safari (iPhone) ou Chrome (Android).</div>
+    <div class="script" id="script"></div>
+  </main>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+const PAUSE_MS = 1300;
+const RATES = [0.8, 1, 1.15, 1.3, 1.5, 1.75, 2];
+const synth = window.speechSynthesis;
+
+let scripts = store.get('lpm.scripts', []);
+let currentId = null;
+let items = [];          // {k:'sec'|'scr'|'say'|'pz', text, gap}
+let says = [];           // índices em items que são 'say'
+let pos = 0;             // posição em says
+let playing = false;
+let token = 0;           // invalida callbacks de falas canceladas
+let rateIdx = Math.max(0, RATES.indexOf(store.get('lpm.rate', 1)));
+let voices = [];
+let wakeLock = null;
+
+/* ---------- parser ---------- */
+function parse(text){
+  const out = [];
+  const paras = text.replace(/\r/g, '').split(/\n\s*\n/);
+  paras.forEach(p => {
+    let first = true;
+    p.split('\n').forEach(line => {
+      let l = line.trim();
+      if(!l) return;
+      const sec = l.match(/^\[([^\]:]+)\]$/);
+      if(sec){ out.push({k:'sec', text: sec[1].trim()}); return; }
+      // direções [na tela: ...] (em qualquer ponto da linha)
+      l = l.replace(/\[\s*na tela\s*:\s*([^\]]*)\]/gi, (_, d) => { out.push({k:'scr', text: d.trim()}); return ' '; }).trim();
+      // seção no início da linha: "[GANCHO] texto"
+      l = l.replace(/^\[([^\]:]+)\]\s*/, (_, s) => { out.push({k:'sec', text: s.trim()}); return ''; });
+      // (pausa) separa trechos
+      l.split(/\(\s*pausa\s*\)/i).forEach((chunk, i) => {
+        if(i > 0) out.push({k:'pz'});
+        sentences(chunk).forEach(s => {
+          out.push({k:'say', text: s, gap: first});
+          first = false;
+        });
+      });
+    });
+  });
+  return out;
+}
+function sentences(t){
+  t = t.replace(/\s+/g, ' ').trim();
+  if(!t) return [];
+  return t.split(/(?<=[.!?…:])\s+(?=[\p{Lu}\d"“(—-])/u).map(s => s.trim()).filter(Boolean);
+}
+// texto limpo para a voz: sem markdown, emoji e aspas soltas
+function speakable(t){
+  return t.replace(/[*_`#>]/g, '').replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim();
+}
+
+/* ---------- biblioteca ---------- */
+function titleOf(s){ return s.title || (s.text.replace(/\s+/g, ' ').slice(0, 40) + '…'); }
+function renderLib(){
+  const box = $('libList');
+  $('lib').hidden = !scripts.length;
+  box.innerHTML = '';
+  scripts.forEach(s => {
+    const d = document.createElement('div'); d.className = 'item';
+    const b = document.createElement('button'); b.className = 'nm';
+    b.textContent = titleOf(s);
+    const sm = document.createElement('small');
+    sm.textContent = new Date(s.at).toLocaleDateString('pt-BR');
+    b.appendChild(sm);
+    b.onclick = () => open(s.id);
+    const r = document.createElement('button'); r.className = 'rm'; r.textContent = '✕'; r.setAttribute('aria-label', 'Apagar');
+    r.onclick = () => { if(confirm('Apagar este roteiro?')){ scripts = scripts.filter(x => x.id !== s.id); store.set('lpm.scripts', scripts); renderLib(); } };
+    d.append(b, r); box.appendChild(d);
+  });
+}
+
+/* ---------- telas ---------- */
+function showEdit(){
+  stop();
+  $('viewPlay').hidden = true; $('viewEdit').hidden = false;
+  renderLib(); window.scrollTo(0, 0);
+}
+function open(id){
+  const s = scripts.find(x => x.id === id); if(!s) return;
+  currentId = id;
+  items = parse(s.text);
+  says = items.map((it, i) => it.k === 'say' ? i : -1).filter(i => i >= 0);
+  pos = Math.min(s.pos || 0, Math.max(0, says.length - 1));
+  $('viewEdit').hidden = true; $('viewPlay').hidden = false;
+  $('titleBtn').textContent = (s.title || 'Roteiros').slice(0, 22).toUpperCase();
+  renderScript(); setPos(pos, true); window.scrollTo(0, 0);
+}
+function renderScript(){
+  const box = $('script'); box.innerHTML = '';
+  items.forEach((it, i) => {
+    let el;
+    if(it.k === 'sec'){ el = div('sec', it.text); }
+    else if(it.k === 'scr'){ el = div('scr', ''); const b = document.createElement('b'); b.textContent = 'Na tela'; el.append(b, it.text); }
+    else if(it.k === 'pz'){ el = div('pz', '(pausa)'); }
+    else {
+      el = div('ph' + (it.gap ? ' gap' : ''), it.text);
+      el.dataset.p = says.indexOf(i);
+      el.onclick = () => { setPos(+el.dataset.p); if(playing) speakFrom(pos); };
+    }
+    it.el = el; box.appendChild(el);
+  });
+  $('seek').max = Math.max(0, says.length - 1);
+}
+const div = (c, t) => { const e = document.createElement('div'); e.className = c; e.textContent = t; return e; };
+
+function setPos(p, noScroll){
+  pos = Math.max(0, Math.min(p, says.length - 1));
+  items.forEach(it => it.el && it.el.classList.remove('cur'));
+  says.forEach((idx, n) => items[idx].el.classList.toggle('done', n < pos));
+  const cur = items[says[pos]];
+  if(cur){
+    cur.el.classList.add('cur');
+    if(!noScroll) cur.el.scrollIntoView({block:'center', behavior:'smooth'});
+  }
+  $('cnt').textContent = `Frase ${says.length ? pos + 1 : 0} de ${says.length}`;
+  $('seek').value = pos;
+  const s = scripts.find(x => x.id === currentId);
+  if(s){ s.pos = pos; store.set('lpm.scripts', scripts); }
+}
+
+/* ---------- voz ---------- */
+function loadVoices(){
+  const all = synth ? synth.getVoices() : [];
+  if(!all.length) return;
+  const pt = all.filter(v => /^pt/i.test(v.lang));
+  voices = pt.length ? pt : all;
+  voices.sort((a, b) => (/pt-BR/i.test(b.lang) - /pt-BR/i.test(a.lang)) || a.name.localeCompare(b.name));
+  const sel = $('voice'); sel.innerHTML = '';
+  voices.forEach((v, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = `${v.name} — ${v.lang}${v.localService ? ' · local' : ''}`;
+    sel.appendChild(o);
+  });
+  const saved = store.get('lpm.voice', '');
+  let i = voices.findIndex(v => v.voiceURI === saved);
+  if(i < 0) i = voices.findIndex(v => /luciana|francisca|maria|thalita/i.test(v.name) && /pt-BR/i.test(v.lang));
+  if(i < 0) i = 0;
+  sel.value = i; voiceNote();
+}
+function voiceNote(){
+  const v = voices[$('voice').value];
+  $('vnote').textContent = v ? (v.localService ? 'Esta voz funciona no aparelho.' : 'Esta voz usa internet.') : '';
+}
+function utter(text, done){
+  const u = new SpeechSynthesisUtterance(speakable(text));
+  const v = voices[$('voice').value];
+  if(v){ u.voice = v; u.lang = v.lang; } else u.lang = 'pt-BR';
+  u.rate = RATES[rateIdx];
+  u.onend = done; u.onerror = done;
+  synth.speak(u);
+}
+
+/* ---------- reprodução ---------- */
+function speakFrom(p){
+  if(!synth) return;
+  synth.cancel();
+  const my = ++token;
+  playing = true; ui(); lock();
+  setPos(p);
+  const step = () => {
+    if(my !== token) return;
+    const idx = says[pos];
+    const text = items[idx].text;
+    utter(text, () => {
+      if(my !== token) return;
+      // pausas explícitas logo após a frase
+      let wait = 250, j = idx + 1;
+      while(items[j] && items[j].k !== 'say'){ if(items[j].k === 'pz') wait += PAUSE_MS; j++; }
+      if(items[idx + 1] && items[idx + 1].k === 'say' && items[idx + 1].gap) wait += 500;
+      if(pos >= says.length - 1){ stop(); setPos(0, true); return; }
+      setTimeout(() => { if(my !== token) return; setPos(pos + 1); step(); }, wait);
+    });
+  };
+  step();
+}
+function stop(){
+  token++; playing = false;
+  if(synth) synth.cancel();
+  ui(); unlock();
+}
+function ui(){
+  $('play').textContent = playing ? '❚❚ Pausar' : '▶ Ouvir';
+  if('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+}
+async function lock(){ try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch{} }
+function unlock(){ try{ wakeLock && wakeLock.release(); }catch{} wakeLock = null; }
+
+/* ---------- eventos ---------- */
+$('txt').addEventListener('input', () => { $('prep').disabled = !$('txt').value.trim(); });
+$('prep').onclick = () => {
+  const text = $('txt').value.trim(); if(!text) return;
+  const s = {id: String(Date.now()), title: $('titleIn').value.trim(), text, at: Date.now(), pos: 0};
+  scripts.unshift(s); store.set('lpm.scripts', scripts);
+  $('txt').value = ''; $('titleIn').value = ''; $('prep').disabled = true;
+  open(s.id);
+};
+$('newBtn').onclick = showEdit;
+$('titleBtn').onclick = showEdit;
+$('play').onclick = () => playing ? stop() : speakFrom(pos);
+$('prev').onclick = () => { setPos(pos - 1); if(playing) speakFrom(pos); };
+$('next').onclick = () => { setPos(pos + 1); if(playing) speakFrom(pos); };
+$('rep').onclick  = () => speakFrom(pos);
+$('seek').oninput = e => { setPos(+e.target.value); if(playing) speakFrom(pos); };
+$('spd').onclick = () => {
+  rateIdx = (rateIdx + 1) % RATES.length; store.set('lpm.rate', RATES[rateIdx]);
+  $('spd').textContent = RATES[rateIdx] + '×';
+  if(playing) speakFrom(pos);
+};
+$('voice').onchange = () => {
+  const v = voices[$('voice').value]; if(v) store.set('lpm.voice', v.voiceURI);
+  voiceNote(); if(playing) speakFrom(pos);
+};
+$('test').onclick = () => {
+  if(!synth) return; synth.cancel(); token++; playing = false; ui();
+  utter('Olá! Esta é a voz que vai ler o seu roteiro.', () => {});
+};
+document.addEventListener('visibilitychange', () => { if(playing && !document.hidden) lock(); });
+
+if('mediaSession' in navigator){
+  const h = (a, f) => { try{ navigator.mediaSession.setActionHandler(a, f); }catch{} };
+  h('play', () => speakFrom(pos)); h('pause', stop);
+  h('nexttrack', () => $('next').click()); h('previoustrack', () => $('prev').click());
+}
+
+/* ---------- init ---------- */
+$('spd').textContent = RATES[rateIdx] + '×';
+if(!synth){ $('noTTS').hidden = false; }
+else { loadVoices(); synth.onvoiceschanged = loadVoices; setTimeout(loadVoices, 500); }
+renderLib();
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

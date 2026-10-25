@@ -1,0 +1,13 @@
+{
+  "name": "Lê pra mim",
+  "short_name": "Lê pra mim",
+  "description": "Ouça seus roteiros no fone de ouvido",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6f3ee",
+  "theme_color": "#f6f3ee",
+  "lang": "pt-BR",
+  "icons": [
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
